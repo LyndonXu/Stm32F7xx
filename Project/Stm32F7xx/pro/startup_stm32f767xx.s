@@ -70,6 +70,7 @@ __heap_limit
                 EXPORT  __Vectors
                 EXPORT  __Vectors_End
                 EXPORT  __Vectors_Size
+                IMPORT  OS_CPU_PendSVHandler
 
 __Vectors       DCD     __initial_sp               ; Top of Stack
                 DCD     Reset_Handler              ; Reset Handler
@@ -85,7 +86,8 @@ __Vectors       DCD     __initial_sp               ; Top of Stack
                 DCD     SVC_Handler                ; SVCall Handler
                 DCD     DebugMon_Handler           ; Debug Monitor Handler
                 DCD     0                          ; Reserved
-                DCD     PendSV_Handler             ; PendSV Handler
+                ;DCD     PendSV_Handler             ; PendSV Handler
+				DCD     OS_CPU_PendSVHandler
                 DCD     SysTick_Handler            ; SysTick Handler
 
                 ; External Interrupts
@@ -213,9 +215,29 @@ Reset_Handler    PROC
 
                  LDR     R0, =SystemInit
                  BLX     R0
+				 
+		         IF {FPU} != "SoftVFP"
+                                                ; Enable Floating Point Support at reset for FPU
+                 LDR.W   R0, =0xE000ED88         ; Load address of CPACR register
+                 LDR     R1, [R0]                ; Read value at CPACR
+                 ORR     R1,  R1, #(0xF <<20)    ; Set bits 20-23 to enable CP10 and CP11 coprocessors
+                                                ; Write back the modified CPACR value
+                 STR     R1, [R0]                ; Wait for store to complete
+                 DSB
+                
+                                                ; Disable automatic FP register content
+                                                ; Disable lazy context switch
+                 LDR.W   R0, =0xE000EF34         ; Load address to FPCCR register
+                 LDR     R1, [R0]
+                 AND     R1,  R1, #(0x3FFFFFFF)  ; Clear the LSPEN and ASPEN bits
+                 STR     R1, [R0]
+                 ISB                             ; Reset pipeline now the FPU is enabled
+                 ENDIF
+					 
                  LDR     R0, =__main
                  BX      R0
                  ENDP
+
 
 ; Dummy Exception Handlers (infinite loops which can be modified)
 

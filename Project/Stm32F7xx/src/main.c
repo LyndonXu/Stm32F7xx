@@ -13,9 +13,14 @@
 #include <string.h>
 #include "sdram.h"
 #include "main.h"
+#include "os.h"
+
 #include "message.h"
 #include "protocol.h"
 #include "common.h"
+
+#include "bsp.h"
+#include "os_app_hooks.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -29,7 +34,138 @@ static void CPU_CACHE_Enable(void);
 /* Private functions ---------------------------------------------------------*/
 int32_t CopyToUart1Message(void *pData, uint32_t u32Length);
 
+#define  APP_CFG_TASK_START_PRIO                2u
+#define  APP_CFG_TASK_OBJ_PRIO                  3u
+#define  APP_CFG_TASK_EQ_PRIO                   4u
 
+
+#define  APP_CFG_TASK_START_STK_SIZE            256u
+#define  APP_CFG_TASK_EQ_STK_SIZE               512u
+#define  APP_CFG_TASK_OBJ_STK_SIZE              256u
+
+
+static  OS_TCB       AppTaskStartTCB;
+static  CPU_STK      AppTaskStartStk[APP_CFG_TASK_START_STK_SIZE];
+
+static  void  AppTaskStart (void *p_arg)
+{
+    OS_ERR      err;
+    CPU_INT32U  r0;
+    CPU_INT32U  r1;
+    CPU_INT32U  r2;
+    CPU_INT32U  r3;
+    CPU_INT32U  r4;
+    CPU_INT32U  r5;
+    CPU_INT32U  r6;
+    CPU_INT32U  r7;
+    CPU_INT32U  r8;
+    CPU_INT32U  r9;
+    CPU_INT32U  r10;
+    CPU_INT32U  r11;
+    CPU_INT32U  r12;
+
+
+   (void)p_arg;
+
+    r0  =  0u;                                                  /* Initialize local variables.                          */
+    r1  =  1u;
+    r2  =  2u;
+    r3  =  3u;
+    r4  =  4u;
+    r5  =  5u;
+    r6  =  6u;
+    r7  =  7u;
+    r8  =  8u;
+    r9  =  9u;
+    r10 = 10u;
+    r11 = 11u;
+    r12 = 12u;
+
+    BSP_Init();                                                 /* Initialize BSP functions                             */
+
+#if OS_CFG_STAT_TASK_EN > 0u
+    OSStatTaskCPUUsageInit(&err);                               /* Compute CPU capacity with no task running            */
+#endif
+
+#ifdef CPU_CFG_INT_DIS_MEAS_EN
+    CPU_IntDisMeasMaxCurReset();
+#endif
+
+
+    BSP_LED_Off(0u);
+
+    while (DEF_TRUE) {                                          /* Task body, always written as an infinite loop.       */
+        BSP_LED_Toggle(0u);
+        OSTimeDlyHMSM(0u, 0u, 0u, 100u,
+                      OS_OPT_TIME_HMSM_STRICT,
+                      &err);
+
+        if ((r0  !=  0u) ||                                     /* Check task context.                                  */
+            (r1  !=  1u) ||
+            (r2  !=  2u) ||
+            (r3  !=  3u) ||
+            (r4  !=  4u) ||
+            (r5  !=  5u) ||
+            (r6  !=  6u) ||
+            (r7  !=  7u) ||
+            (r8  !=  8u) ||
+            (r9  !=  9u) ||
+            (r10 != 10u) ||
+            (r11 != 11u) ||
+            (r12 != 12u)) 
+		{
+			r12 = r12;
+        }
+    }
+}
+
+void OSTest()
+{
+	OS_ERR err = OS_ERR_NONE;
+	/* Enable the CPU Cache */
+	CPU_CACHE_Enable();
+
+	/* STM32F7xx HAL library initialization:
+	     - Configure the Flash prefetch
+	     - Systick timer is configured by default as source of time base, but user
+	       can eventually implement his proper time base source (a general purpose
+	       timer for example or other time source), keeping in mind that Time base
+	       duration should be kept 1ms since PPP_TIMEOUT_VALUEs are defined and
+	       handled in milliseconds basis.
+	     - Set NVIC Group Priority to 4
+	     - Low Level Initialization
+	   */
+	HAL_Init();
+
+	/* Configure the system clock to 216 MHz */
+	SystemClock_Config();
+
+
+	CPU_IntDis();
+	
+    OSInit(&err);                                               /* Init uC/OS-III.                                      */
+    App_OS_SetAllHooks();
+
+    OSTaskCreate(&AppTaskStartTCB,                              /* Create the start task                                */
+                  "App Task Start",
+                  AppTaskStart,
+                  0u,
+                  APP_CFG_TASK_START_PRIO,
+                 &AppTaskStartStk[0u],
+                  AppTaskStartStk[APP_CFG_TASK_START_STK_SIZE / 10u],
+                  APP_CFG_TASK_START_STK_SIZE,
+                  0u,
+                  0u,
+                  0u,
+                 (OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
+                 &err);
+
+    OSStart(&err);                                              /* Start multitasking (i.e. give control to uC/OS-III). */
+
+    while (DEF_ON) {                                            /* Should Never Get Here.                               */
+        ;
+    }	
+}
 /**
   * @brief  Main program
   * @param  None
@@ -39,6 +175,9 @@ int main(void)
 {
 	uint32_t u32TimeToggle = 0;
 	uint32_t u32TimeToggle1S = 0;
+	
+	OSTest();
+	
 	/* This sample code shows how to use GPIO HAL API to toggle GPIOB-GPIO_PIN_0 IO
 	  in an infinite loop. It is possible to connect a LED between GPIOB-GPIO_PIN_0
 	  output and ground via a 330ohm resistor to see this external LED blink.

@@ -14,8 +14,11 @@
 
 #if CRITICAL_METHOD == 3
 
+#ifndef CPU_MODULE_PRESENT
 int CPU_SR_Save(void);
 void CPU_SR_Restore(int cpu_sr);
+
+#endif
 
 #define  USE_CRITICAL()		int cpu_sr = 0
 #define  ENTER_CRITICAL()	{cpu_sr = CPU_SR_Save();}

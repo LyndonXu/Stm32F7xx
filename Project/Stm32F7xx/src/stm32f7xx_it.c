@@ -138,6 +138,7 @@ void DebugMon_Handler(void)
 {
 }
 
+#if !USE_OS
 /**
   * @brief  This function handles PendSVC exception.
   * @param  None
@@ -156,7 +157,7 @@ void SysTick_Handler(void)
 {
   HAL_IncTick();
 }
-
+#endif
 
 
 /******************************************************************************/

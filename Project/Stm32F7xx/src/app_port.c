@@ -32,7 +32,7 @@ __asm void OS_CPU_ClearInterruptMask(void)
 }
 
 #elif CRITICAL_METHOD == 3
-
+#if 0
 __asm int CPU_SR_Save(void)
 {
     MRS     R0, PRIMASK                                         
@@ -45,6 +45,7 @@ __asm void CPU_SR_Restore(int cpu_sr)
     MSR     PRIMASK, R0
     BX      LR
 }
+#endif
 #endif
 
 
