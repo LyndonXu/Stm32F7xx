@@ -746,6 +746,62 @@ CPU_INT16S  CPU_IntSrcPrioGet (CPU_INT08U  pos)
     return (prio);
 }
 
+
+
+#if CPU_CFG_CRITICAL_METHOD == CPU_CRITICAL_METHOD_MAX_SYSCAL
+#if 1
+__asm int CPU_SetInterruptMask(void)
+{
+	PRESERVE8
+
+	PUSH	{ R1 }
+	MRS     R0, PRIMASK                                         
+	MOV		R1, R0
+	MOV		R0, #CPU_MAX_SYSCALL_INTERRUPT_PRIORITY
+	MSR		BASEPRI, R0
+	MOV		R0,  R1
+	POP		{ R1 }
+	BX		R14
+}
+#else
+__asm int CPU_SetInterruptMask(void)
+{
+	PRESERVE8
+
+	MOV		R0, #CPU_MAX_SYSCALL_INTERRUPT_PRIORITY
+	MSR		BASEPRI, R0
+	BX		R14
+}
+#endif
+
+__asm void CPU_ClearInterruptMask(int cpu_sr)
+{
+	PRESERVE8
+
+	/* FAQ:  Setting BASEPRI to 0 is not a bug.  Please see 
+	http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html before disagreeing.
+	MOV		R0, #0*/ 
+	MSR		BASEPRI, R0
+	BX		R14
+}
+
+#elif CRITICAL_METHOD == 3
+#if 0
+__asm int CPU_SR_Save(void)
+{
+    MRS     R0, PRIMASK                                         
+    CPSID   I
+    BX      LR
+}
+
+__asm void CPU_SR_Restore(int cpu_sr)
+{
+    MSR     PRIMASK, R0
+    BX      LR
+}
+#endif
+#endif
+
 #ifdef __cplusplus
 }
 #endif

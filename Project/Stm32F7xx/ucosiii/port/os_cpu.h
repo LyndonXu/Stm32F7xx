@@ -131,9 +131,11 @@ extern  "C" {
 *                   result of losing tick interrupts.
 *********************************************************************************************************
 */
-
-#define  OS_CPU_CFG_SYSTICK_PRIO           0u
-
+#ifndef  CPU_LIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY
+#define  OS_CPU_CFG_SYSTICK_PRIO           3u
+#else 
+#define  OS_CPU_CFG_SYSTICK_PRIO           CPU_LIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY
+#endif
 
 /*
 *********************************************************************************************************

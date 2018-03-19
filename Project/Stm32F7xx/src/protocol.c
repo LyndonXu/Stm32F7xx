@@ -664,14 +664,28 @@ int32_t BaseCmdProcess(StIOFIFO *pFIFO, const StIOTCB *pIOTCB)
 				}
 				case 0x03:	/* return the UUID */
 				{
-					/* <TODO:  >
+					/* <TODO:  > */
+#define GET_UID_CNT(Byte)			(96 / (Byte * 8))
+#define UID_BASE_ADDR				(0x1FFFF420)
+					
+#pragma anon_unions
+typedef struct _tagStUID
+{
+	union
+	{
+		uint16_t u16UID[GET_UID_CNT(sizeof(uint16_t))];
+		uint32_t u32UID[GET_UID_CNT(sizeof(uint32_t))];
+		uint8_t u8UID[GET_UID_CNT(sizeof(uint8_t))];
+	};
+}StUID;
 					StUID stUID;
-					GetUID(&stUID);
+					//GetUID(&stUID);
+					memcpy(&stUID, (void *)UID_BASE_ADDR, sizeof(StUID));
 					boNeedCopy = false;
 					pEcho = YNAMakeASimpleVarialbleCmd(0x8003, 
 							&stUID, sizeof(StUID), &u32EchoLength);
-					*/
-					boHasEcho = false;
+					
+					//boHasEcho = false;
 					break;
 				}
 				case 0x05:	/* return the BufLength */

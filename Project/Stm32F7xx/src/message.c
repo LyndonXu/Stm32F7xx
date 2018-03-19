@@ -202,6 +202,7 @@ int32_t MessageUARTInitMsp(void)
 #endif
 	/* NVIC configuration for USART, to catch the TX complete */
 	__HAL_UART_ENABLE_IT(&s_stUart1Handle, UART_IT_RXNE);
+	__HAL_UART_ENABLE_IT(&s_stUart1Handle, UART_IT_IDLE);
 	HAL_NVIC_SetPriority(MSG_UART_IRQ_CHANNEL, 4, 1);
 	HAL_NVIC_EnableIRQ(MSG_UART_IRQ_CHANNEL);
 	
@@ -232,12 +233,43 @@ void MSG_DMA_TX_IRQHandler(void)
   */
 void MSG_UART_IRQ(void)
 {
+	
+	void IRQTriggerMessageFlush(void);
+#if 0
 	if((__HAL_UART_GET_FLAG(&s_stUart1Handle, UART_FLAG_RXNE) != RESET))
 	{
 		uint8_t u8RxTmp = s_stUart1Handle.Instance->RDR;
 		LOCWriteSomeData(&s_stLevelOneCache, &u8RxTmp, 1);
 	}
+#else
+	uint16_t u16SR = s_stUart1Handle.Instance->ISR;
+	if ((u16SR & USART_FLAG_IDLE) != 0)
+	{
+		uint8_t u8RxTmp = (s_stUart1Handle.Instance->RDR & (uint16_t)0x00FF);
+		(void)u8RxTmp;
+		s_stUart1Handle.Instance->ICR = USART_CLEAR_IDLEF;
+		IRQTriggerMessageFlush();
+	}
+	else if ((u16SR & USART_FLAG_RXNE) != 0)
+	{
+		uint8_t u8RxTmp = (s_stUart1Handle.Instance->RDR & (uint16_t)0x00FF);
+		LOCWriteSomeData(&s_stLevelOneCache, &u8RxTmp, 1);
+		
+		if (s_stLevelOneCache.u32Using >= (LEVEL_ONE_CACHE_CNT / 4))
+		{
+			IRQTriggerMessageFlush();
+		}		
+	}
+	
+//	if ((u16SR & USART_FLAG_ORE) != 0)
+//	{
+//		s_stUart1Handle.Instance->ICR = USART_CLEAR_OREF;
+//	}
+	
+#endif
 	HAL_UART_IRQHandler(&s_stUart1Handle);
+
+	//IRQTriggerMessageFlush();
 }
 
 
@@ -399,6 +431,7 @@ void MessageUartRelease(StIOFIFO *pFIFO)
 
 int32_t MessageUartWrite(void *pData, bool boNeedFree, uint16_t u16ID, uint32_t u32Length)
 {
+	void TriggerMessageFlush(void);
 	StIOFIFOList *pFIFO = NULL;
 	if (pData == NULL)
 	{
@@ -414,7 +447,7 @@ int32_t MessageUartWrite(void *pData, bool boNeedFree, uint16_t u16ID, uint32_t 
 	pFIFO->s32Length = u32Length;
 	pFIFO->boNeedFree = boNeedFree;
 	InsertIntoTheRWFIFO(&s_stIOFIFOCtrl, pFIFO, false);
-	
+	TriggerMessageFlush();
 	return 0;
 }
 

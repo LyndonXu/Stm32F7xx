@@ -34,52 +34,33 @@ static void CPU_CACHE_Enable(void);
 /* Private functions ---------------------------------------------------------*/
 int32_t CopyToUart1Message(void *pData, uint32_t u32Length);
 
-#define  APP_CFG_TASK_START_PRIO                2u
-#define  APP_CFG_TASK_OBJ_PRIO                  3u
-#define  APP_CFG_TASK_EQ_PRIO                   4u
+#define  APP_CFG_TASK_START_PRIO				16u
+#define  APP_CFG_TASK_MSG_PRIO					2u
+#define  APP_CFG_TASK_GUI_PRIO					4u
 
 
-#define  APP_CFG_TASK_START_STK_SIZE            256u
-#define  APP_CFG_TASK_EQ_STK_SIZE               512u
-#define  APP_CFG_TASK_OBJ_STK_SIZE              256u
+#define  APP_CFG_TASK_START_STK_SIZE			256u
+#define  APP_CFG_TASK_MSG_STK_SIZE				256u
+#define  APP_CFG_TASK_GUI_STK_SIZE				256u
 
 
-static  OS_TCB       AppTaskStartTCB;
-static  CPU_STK      AppTaskStartStk[APP_CFG_TASK_START_STK_SIZE];
+static	OS_TCB			s_stAppTaskStartTCB;
+static	CPU_STK			s_stAppTaskStartStk[APP_CFG_TASK_START_STK_SIZE];
+
+
+static	OS_TCB			s_stAppTaskMsgTCB;
+static	CPU_STK			s_stAppTaskMsgStk[APP_CFG_TASK_MSG_STK_SIZE];
+
 
 static  void  AppTaskStart (void *p_arg)
 {
-    OS_ERR      err;
-    CPU_INT32U  r0;
-    CPU_INT32U  r1;
-    CPU_INT32U  r2;
-    CPU_INT32U  r3;
-    CPU_INT32U  r4;
-    CPU_INT32U  r5;
-    CPU_INT32U  r6;
-    CPU_INT32U  r7;
-    CPU_INT32U  r8;
-    CPU_INT32U  r9;
-    CPU_INT32U  r10;
-    CPU_INT32U  r11;
-    CPU_INT32U  r12;
+	void TaskMessageFlush(void *pArg);
 
+    OS_ERR      err;
 
    (void)p_arg;
-
-    r0  =  0u;                                                  /* Initialize local variables.                          */
-    r1  =  1u;
-    r2  =  2u;
-    r3  =  3u;
-    r4  =  4u;
-    r5  =  5u;
-    r6  =  6u;
-    r7  =  7u;
-    r8  =  8u;
-    r9  =  9u;
-    r10 = 10u;
-    r11 = 11u;
-    r12 = 12u;
+	
+	OSSchedLock(&err);
 
     BSP_Init();                                                 /* Initialize BSP functions                             */
 
@@ -93,29 +74,123 @@ static  void  AppTaskStart (void *p_arg)
 
 
     BSP_LED_Off(0u);
+	
+	
+	SDRAM_Init();
+	
+	
+	{
+		int32_t LTDC_Init(void);
+		LTDC_Init();
+	}
+	
+	if (1)
+	{
+		c_stUartIOTCB.pFunMsgInit();
 
-    while (DEF_TRUE) {                                          /* Task body, always written as an infinite loop.       */
+		OSTaskCreate(&s_stAppTaskMsgTCB,                              /* Create the start task                                */
+				  "App Task Message",
+				  TaskMessageFlush,
+				  0u,
+				  APP_CFG_TASK_MSG_PRIO,
+				 &s_stAppTaskMsgStk[0u],
+				  s_stAppTaskMsgStk[APP_CFG_TASK_MSG_STK_SIZE / 10u],
+				  APP_CFG_TASK_MSG_STK_SIZE,
+				  0u,
+				  0u,
+				  0u,
+				 (OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
+				 &err);
+	}
+
+
+
+	OSSchedUnlock(&err);
+	
+	{
+		void LTDC_Fill(uint16_t sx, uint16_t sy, 
+			uint16_t ex, uint16_t ey, uint32_t u32Color);
+		
+		LTDC_Fill(0, 0, 100, 100, 0xFFFF0000);
+
+	}
+    while (DEF_TRUE) 
+	{                                          /* Task body, always written as an infinite loop.       */
         BSP_LED_Toggle(0u);
+		
+		if (1)
+		{
+			static int32_t sx = 0;
+			static int32_t sy = 0;
+			static int32_t ex = 50;
+			static int32_t ey = 50;
+			
+			static bool boXACC = true;
+			static bool boYACC = true;
+			
+			void LTDC_Fill(uint16_t sx, uint16_t sy, 
+				uint16_t ex, uint16_t ey, uint32_t u32Color);
+			
+			LTDC_Fill(sx, sy, ex, ey, 0xFFFFFFFF);
+			if (boXACC)
+			{
+				if (ex < 480 - 1)
+				{
+					sx++;
+					ex++;
+				}
+				else
+				{
+					boXACC = false;
+				}
+			}
+			else
+			{
+				if (sx != 0)
+				{
+					sx--;
+					ex--;					
+				}
+				else
+				{
+					boXACC = true;
+				}
+			}
+			
+			if (boYACC)
+			{
+				if (ey < 272 - 1)
+				{
+					sy++;
+					ey++;
+				}
+				else
+				{
+					boYACC = false;
+				}
+			}
+			else
+			{
+				if (sy != 0)
+				{
+					sy--;
+					ey--;					
+				}
+				else
+				{
+					boYACC = true;
+				}
+			}
+
+			LTDC_Fill(sx, sy, ex, ey, 0xFFFF0000);
+		}
+
+		
+		
         OSTimeDlyHMSM(0u, 0u, 0u, 100u,
                       OS_OPT_TIME_HMSM_STRICT,
                       &err);
 
-        if ((r0  !=  0u) ||                                     /* Check task context.                                  */
-            (r1  !=  1u) ||
-            (r2  !=  2u) ||
-            (r3  !=  3u) ||
-            (r4  !=  4u) ||
-            (r5  !=  5u) ||
-            (r6  !=  6u) ||
-            (r7  !=  7u) ||
-            (r8  !=  8u) ||
-            (r9  !=  9u) ||
-            (r10 != 10u) ||
-            (r11 != 11u) ||
-            (r12 != 12u)) 
-		{
-			r12 = r12;
-        }
     }
 }
 
@@ -146,13 +221,13 @@ void OSTest()
     OSInit(&err);                                               /* Init uC/OS-III.                                      */
     App_OS_SetAllHooks();
 
-    OSTaskCreate(&AppTaskStartTCB,                              /* Create the start task                                */
+    OSTaskCreate(&s_stAppTaskStartTCB,                              /* Create the start task                                */
                   "App Task Start",
                   AppTaskStart,
                   0u,
                   APP_CFG_TASK_START_PRIO,
-                 &AppTaskStartStk[0u],
-                  AppTaskStartStk[APP_CFG_TASK_START_STK_SIZE / 10u],
+                 &s_stAppTaskStartStk[0u],
+                  s_stAppTaskStartStk[APP_CFG_TASK_START_STK_SIZE / 10u],
                   APP_CFG_TASK_START_STK_SIZE,
                   0u,
                   0u,
@@ -162,7 +237,8 @@ void OSTest()
 
     OSStart(&err);                                              /* Start multitasking (i.e. give control to uC/OS-III). */
 
-    while (DEF_ON) {                                            /* Should Never Get Here.                               */
+    while (DEF_ON) 
+	{                                            /* Should Never Get Here.                               */
         ;
     }	
 }

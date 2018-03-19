@@ -1,7 +1,11 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
+#include "stm32f7xx_hal.h"
 
+#define RE_IMPLEMENT
 #include "common.h"
 
 void LittleAndBigEndianTransfer(char *pDest, const char *pSrc, uint32_t u32Size)
@@ -227,3 +231,21 @@ uint32_t SysTimeDiff( uint32_t u32Begin, uint32_t u32End)
 		return ((uint32_t)(~0)) - u32Begin + u32End;
 	}
 }
+
+
+void *MallocSafe(uint32_t u32Size)
+{
+	void *pData = NULL;
+	__disable_irq();
+	pData = malloc(u32Size);
+	__enable_irq();
+	return pData;
+}
+
+void FreeSafe(void *pData)
+{
+	__disable_fiq();
+	free(pData);
+	__enable_fiq();
+}
+

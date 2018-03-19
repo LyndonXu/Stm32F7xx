@@ -304,22 +304,30 @@ typedef  CPU_ADDR                 CPU_STK_SIZE;                 /* Defines CPU s
 *********************************************************************************************************
 */
                                                                 /* Configure CPU critical method      (see Note #1) :   */
-#define  CPU_CFG_CRITICAL_METHOD    CPU_CRITICAL_METHOD_STATUS_LOCAL
+#define  CPU_CFG_CRITICAL_METHOD    CPU_CRITICAL_METHOD_MAX_SYSCAL
+//#define  CPU_CFG_CRITICAL_METHOD    CPU_CRITICAL_METHOD_STATUS_LOCAL
 
 typedef  CPU_INT32U                 CPU_SR;                     /* Defines   CPU status register size (see Note #3b).   */
 
                                                                 /* Allocates CPU status register word (see Note #3a).   */
 #if     (CPU_CFG_CRITICAL_METHOD == CPU_CRITICAL_METHOD_STATUS_LOCAL)
 #define  CPU_SR_ALLOC()             CPU_SR  cpu_sr = (CPU_SR)0
-#else
-#define  CPU_SR_ALLOC()
+#elif	(CPU_CFG_CRITICAL_METHOD == CPU_CRITICAL_METHOD_MAX_SYSCAL)
+#define  CPU_SR_ALLOC()             CPU_SR  cpu_sr = (CPU_SR)0
 #endif
 
 
+#if (CPU_CFG_CRITICAL_METHOD == CPU_CRITICAL_METHOD_STATUS_LOCAL)
 
 #define  CPU_INT_DIS()         do { cpu_sr = CPU_SR_Save(); } while (0) /* Save    CPU status word & disable interrupts.*/
 #define  CPU_INT_EN()          do { CPU_SR_Restore(cpu_sr); } while (0) /* Restore CPU status word.                     */
 
+#elif	(CPU_CFG_CRITICAL_METHOD == CPU_CRITICAL_METHOD_MAX_SYSCAL)
+
+#define  CPU_INT_DIS()         do {  cpu_sr = CPU_SetInterruptMask(); } while (0)
+#define  CPU_INT_EN()          do { CPU_ClearInterruptMask(cpu_sr); } while (0)
+
+#endif
 
 #ifdef   CPU_CFG_INT_DIS_MEAS_EN
                                                                         /* Disable interrupts, ...                      */
@@ -419,6 +427,11 @@ void        CPU_BitBandClr   (CPU_ADDR    addr,
                               CPU_INT08U  bit_nbr);
 void        CPU_BitBandSet   (CPU_ADDR    addr,
                               CPU_INT08U  bit_nbr);
+
+int CPU_SetInterruptMask(void);
+
+void CPU_ClearInterruptMask(int cpu_sr);
+
 
 
 /*
@@ -724,11 +737,13 @@ void        CPU_BitBandSet   (CPU_ADDR    addr,
 
 #elif  ((CPU_CFG_CRITICAL_METHOD != CPU_CRITICAL_METHOD_INT_DIS_EN  ) && \
         (CPU_CFG_CRITICAL_METHOD != CPU_CRITICAL_METHOD_STATUS_STK  ) && \
-        (CPU_CFG_CRITICAL_METHOD != CPU_CRITICAL_METHOD_STATUS_LOCAL))
+        (CPU_CFG_CRITICAL_METHOD != CPU_CRITICAL_METHOD_STATUS_LOCAL) && \
+        (CPU_CFG_CRITICAL_METHOD != CPU_CRITICAL_METHOD_MAX_SYSCAL))
 #error  "CPU_CFG_CRITICAL_METHOD  illegally #define'd in 'cpu.h'             "
 #error  "                         [MUST be  CPU_CRITICAL_METHOD_INT_DIS_EN  ]"
 #error  "                         [     ||  CPU_CRITICAL_METHOD_STATUS_STK  ]"
 #error  "                         [     ||  CPU_CRITICAL_METHOD_STATUS_LOCAL]"
+#error  "                         [     ||  CPU_CRITICAL_METHOD_MAX_SYSCAL]"
 #endif
 
 

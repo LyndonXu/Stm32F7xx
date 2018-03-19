@@ -208,6 +208,36 @@
 #define  CPU_CRITICAL_METHOD_STATUS_LOCAL          3u   /* Save/Restore int status to local var (see Note #1c).         */
 
 
+
+/* Cortex-M specific definitions. */
+#ifdef __NVIC_PRIO_BITS
+ /* __BVIC_PRIO_BITS will be specified when CMSIS is being used. */
+ #define CPU_PRIO_BITS                        __NVIC_PRIO_BITS
+#else
+ #define CPU_PRIO_BITS                        4        /* 15 priority levels */
+#endif
+
+/* The lowest interrupt priority that can be used in a call to a "set priority"
+function. */
+#define CPU_LIBRARY_LOWEST_INTERRUPT_PRIORITY     0xf
+
+/* The highest interrupt priority that can be used by any interrupt service
+routine that makes calls to interrupt safe FreeRTOS API functions.  DO NOT CALL
+INTERRUPT SAFE FREERTOS API FUNCTIONS FROM ANY INTERRUPT THAT HAS A HIGHER
+PRIORITY THAN THIS! (higher priorities are lower numeric values. */
+#define CPU_LIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY  3
+
+/* Interrupt priorities used by the kernel port layer itself.  These are generic
+to all Cortex-M ports, and do not rely on any particular library functions. */
+#define CPU_KERNEL_INTERRUPT_PRIORITY     ((CPU_LIBRARY_LOWEST_INTERRUPT_PRIORITY << (8 - CPU_PRIO_BITS)) | (0xFF >> CPU_PRIO_BITS))
+/* !!!! CPU_MAX_SYSCALL_INTERRUPT_PRIORITY must not be set to zero !!!!
+See http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html. */
+#define CPU_MAX_SYSCALL_INTERRUPT_PRIORITY  ((CPU_LIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY << (8 - CPU_PRIO_BITS)) | (0xFF >> CPU_PRIO_BITS))
+
+
+#define  CPU_CRITICAL_METHOD_MAX_SYSCAL             4u   /* Save/Restore int status to local var (see Note #1c).         */
+
+
 /*
 *********************************************************************************************************
 *                                             MODULE END
